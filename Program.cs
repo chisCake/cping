@@ -6,25 +6,28 @@ using System.Net.NetworkInformation;
 namespace cping {
 	class Program {
 		static void Main(string[] args) {
-			if (args.Length == 0) {
+			if (args.Length == 0 || args[0] == "-?" || args[0] == "/?") {
 				Info();
 				return;
 			}
 
 			bool name = "qwertyuiopasdfghjklzxcvbnm".Any(letter => args[0].Contains(letter));
 
+			// Параметры
 			var argsDict = GetArgs(args);
 			int requestsNumber = argsDict["n"];
 			int dataLength = argsDict["l"] > 65500 ? 65500 : argsDict["l"];
 			byte[] buffer = new byte[dataLength];
 			PingOptions options = new PingOptions(argsDict["i"], true);
 
+			// Для статистики
 			int lost = 0;
 			long min, max, sum;
 
 			try {
 				Ping ping = new Ping();
-				PingReply firstReply = ping.Send(args[0], 1, buffer, options);
+				PingReply firstReply = ping.Send(args[0], 10, buffer, options);
+				// Если первый запрос неудачный
 				if (firstReply.Status != IPStatus.Success)
 					PrintResult(firstReply);
 				else {
@@ -33,6 +36,7 @@ namespace cping {
 					Console.WriteLine($"Обмен пакетами с {printThis} с {dataLength} байтами данных");
 					PrintResult(firstReply);
 
+					// Повтор запросов
 					for (int i = 0; i < requestsNumber - 1; i++) {
 						PingReply reply = ping.Send(args[0], 1, buffer, options);
 						sum += reply.RoundtripTime;
@@ -56,6 +60,7 @@ namespace cping {
 			}
 		}
 
+		// Вывод результата запроса
 		static void PrintResult(PingReply reply) {
 			Console.WriteLine(
 			reply.Status switch {
@@ -69,6 +74,7 @@ namespace cping {
 			});
 		}
 
+		// Получение вводимых аргументов
 		static Dictionary<string, int> GetArgs(string[] args) {
 			var result = new Dictionary<string, int> {
 				["n"] = 3,
